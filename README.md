@@ -41,7 +41,6 @@ alembic init alembic
 > set sqlalchemy.url = postgresql://user:password@host/dbname \
 > go to alembic.ini file in your project directory. \
 > sqlalchemy.url = postgresql://user:password@host/dbname \
-
 > change env.py as following:
 
 ```
@@ -90,7 +89,7 @@ else:
 run_migrations_online()
 ```
 
-> Finally \
+> Finally Run in terminal
 
 ```bash
 alembic revision --autogenerate -m "commit message"
