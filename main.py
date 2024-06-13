@@ -98,6 +98,7 @@ async def getPrimaryUser(primary_user_id:uuid.UUID,db:db_dependency):
     result = db.query(models.PrimaryUser).filter(models.PrimaryUser.id == primary_user_id).first()
     if not result:
         raise HTTPException(status_code=404,detail="Primary user not found") 
+    return result
 
 @app.put("/primary_users")
 async def updatePrimaryUser(newPrimaryUser: PrimaryUserUpdateBase, db:db_dependency):
@@ -148,6 +149,7 @@ async def getSecondaryUser(secondary_user_id:uuid.UUID,db:db_dependency):
     result = db.query(models.SecondaryUser).filter(models.SecondaryUser.id == secondary_user_id).first()
     if not result:
         raise HTTPException(status_code=404,detail="Secondary user not found") 
+    return result
 
 @app.put("/secondary_users")
 async def updateSecondaryUser(newSecondaryUser: SecondaryUserUpdateBase, db:db_dependency):
