@@ -59,7 +59,7 @@ class RelationshipBase(BaseModel):
 class RelationshipUpdateBase(BaseModel):
     id: uuid.UUID
     relationship: str = None
-
+    accepted: bool = None
 
 class PeriodEntryBase(BaseModel):
     primary_id: uuid.UUID
@@ -70,6 +70,32 @@ class PeriodEntryUpdateBase(BaseModel):
     start_date: datetime = None
     end_date: datetime = None
     duration: int = None
+
+class CalanederEntryBase(BaseModel):
+    primary_id: uuid.UUID
+    date: datetime
+    symptom_name: str
+    symptom_value: str
+    symptom_unit: str = None
+
+class CalanederEntryUpdateBase(BaseModel):
+    id: uuid.UUID
+    symptom_name: str = None
+    symptom_value: str = None
+    symptom_unit: str = None
+
+class PillConsumptionBase(BaseModel):
+    primary_id: uuid.UUID
+    calender_entry_id: uuid.UUID
+    name: str
+    time: datetime
+    dosage: str
+
+class PillConsumptionUpdateBase(BaseModel):
+    id: uuid.UUID
+    name: str = None
+    time: datetime = None
+    dosage: str = None
 
 #################################################################################################
 #   PRIMARY USER ENDPOINTS
@@ -204,6 +230,9 @@ async def updateRelationship(newRelationship: RelationshipUpdateBase, db:db_depe
         
         if newRelationship.relationship:
             oldRelationshop.relationship = newRelationship.relationship
+            
+        if newRelationship.accepted:
+            oldRelationshop.accepted = newRelationship.accepted
         
         db.commit()
         db.refresh(oldRelationshop)
@@ -212,31 +241,45 @@ async def updateRelationship(newRelationship: RelationshipUpdateBase, db:db_depe
         raise HTTPException(status_code=404,detail="Secondary user not found")
     return oldRelationshop
 
+@app.delete('/relationships/{id}')
+async def deleteRelationship(id: uuid.UUID, db:db_dependency):
+    relationship = db.query(models.Relationship).filter(models.Relationship.id == id).first()
+
+    if not relationship:
+        raise HTTPException(status_code=404, detail="Relationship not found")
+
+    try:
+        db.delete(relationship)
+        db.commit()
+        return {"message": "Relationship deleted successfully"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail="Relationship deletion failed")
+
 #################################################################################################
-#   PERIOD ENDPOINTS
+#   PERIOD ENTRY ENDPOINTS
 #################################################################################################
 
-@app.post('period_entries')
+@app.post('/period_entries')
 async def createPeriodEntry(periodEntry: PeriodEntryBase, db:db_dependency):
-    newPeriodEntries = models.PeriodEntry(
+    newPeriodEntry = models.PeriodEntry(
         primary_id = periodEntry.primary_id,
         start_date = periodEntry.start_date
     )
     
     try:
-        db.add(newPeriodEntries)
+        db.add(newPeriodEntry)
         db.commit()
-        db.refresh(newPeriodEntries)
+        db.refresh(newPeriodEntry)
     except:
         raise HTTPException(status_code=500,detail="Period entry creation failed")
-    return newPeriodEntries
+    return newPeriodEntry
 
-@app.get('period_entries/{primary_id}')
+@app.get('/period_entries/{primary_id}')
 async def getPeriodEntry(primary_id: uuid.UUID, db:db_dependency):
     allEntries = db.query(models.PeriodEntry).filter(models.PeriodEntry.primary_id == primary_id).all()
     return allEntries
 
-@app.put('period_entries')
+@app.put('/period_entries')
 async def updatePeriodEntry(newPeriodEntry: PeriodEntryUpdateBase, db:db_dependency):
     oldPeriodEntry = db.query(models.PeriodEntry).filter(models.PeriodEntry.id == newPeriodEntry.id).first()
     
@@ -246,16 +289,158 @@ async def updatePeriodEntry(newPeriodEntry: PeriodEntryUpdateBase, db:db_depende
         if newPeriodEntry.duration:
             oldPeriodEntry.duration = newPeriodEntry.duration
             
+        db.commit()
+        db.refresh(oldPeriodEntry)
+            
     if not oldPeriodEntry:
         raise HTTPException(status_code=500,detail="Period entry not found")
     return oldPeriodEntry
 
+@app.delete('/period_entries/{id}')
+async def deletePeriodEntries(id: uuid.UUID, db:db_dependency):
+    periodEntry = db.query(models.PeriodEntry).filter(models.PeriodEntry.id == id).first()
+
+    if not periodEntry:
+        raise HTTPException(status_code=404, detail="Period entry not found")
+
+    try:
+        db.delete(periodEntry)
+        db.commit()
+        return {"message": "Period entry deleted successfully"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail="Period entry deletion failed")
 
 #################################################################################################
-#   PERIOD ENDPOINTS
+#   CALENDER ENTRY ENDPOINTS
 #################################################################################################
 
+@app.post('/calender_entries')
+async def createCalenderEntry(calenderEntry: CalanederEntryBase, db:db_dependency):
+    newCalenderEntry = models.CalendarEntry(
+        primary_id = calenderEntry.primary_id,
+        date = calenderEntry.date,
+        symptom_name = calenderEntry.symptom_name,
+        symptom_value = calenderEntry.symptom_value,
+        symptom_unit = calenderEntry.symptom_unit
+    )
+    
+    try:
+        db.add(newCalenderEntry)
+        db.commit()
+        db.refresh(newCalenderEntry)
+    except:
+        raise HTTPException(status_code=500,detail="Calender entry creation failed")
+    return newCalenderEntry
 
+@app.get('/calender_entries/{primary_id}')
+async def getCalenderEntry(primary_id: uuid.UUID, db:db_dependency):
+    allEntries = db.query(models.CalendarEntry).filter(models.CalendarEntry.primary_id == primary_id).all()
+    return allEntries
+
+@app.put('/calender_entries')
+async def updateCalenderEntry(newCalenderEntry: CalanederEntryUpdateBase, db:db_dependency):
+    oldCalenederEntry = db.query(models.CalendarEntry).filter(models.CalendarEntry.id == newCalenderEntry.id).first()
+    
+    if oldCalenederEntry:
+        
+        if newCalenderEntry.symptom_name:
+            oldCalenederEntry.symptom_name = newCalenderEntry.symptom_name
+            
+        if newCalenderEntry.symptom_value:
+            oldCalenederEntry.symptom_value = newCalenderEntry.symptom_value
+            
+        if newCalenderEntry.symptom_unit:
+            oldCalenederEntry.symptom_unit = newCalenderEntry.symptom_unit
+            
+        db.commit()
+        db.refresh(oldCalenederEntry)
+    
+    if not oldCalenederEntry:
+        raise HTTPException(status_code=500,detail="Calender entry not found")
+    return oldCalenederEntry
+
+@app.delete('/calender_entries/{id}')
+async def deleteCalenderEntries(id: uuid.UUID, db:db_dependency):
+    calendarEntry = db.query(models.CalendarEntry).filter(models.CalendarEntry.id == id).first()
+
+    if not calendarEntry:
+        raise HTTPException(status_code=404, detail="Calender entry not found")
+
+    try:
+        db.delete(calendarEntry)
+        db.commit()
+        return {"message": "Calender entry deleted successfully"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail="Calender entry deletion failed")
+
+#################################################################################################
+#   PILL  ENTRY ENDPOINTS
+#################################################################################################
+
+@app.post('/pill_consumptions')
+async def createPillConsumption(pillConsumption: PillConsumptionBase, db:db_dependency):
+    newPillConsumption = models.PillConsumption(
+        primary_id = pillConsumption.primary_id,
+        calender_entry_id = pillConsumption.calender_entry_id,
+        name = pillConsumption.name,
+        time = pillConsumption.time,
+        dosage = pillConsumption.dosage
+    )
+    
+    try:
+        db.add(newPillConsumption)
+        db.commit()
+        db.refresh(newPillConsumption)
+    except:
+        raise HTTPException(status_code=500,detail="Pill consumption creation failed")
+    return newPillConsumption
+
+@app.get('pill_consumptions/{primary_id}')
+async def getPillConsumptionsByPrimaryID(primary_id: uuid.UUID, db:db_dependency):
+    allResults = db.query(models.PillConsumption).filter(models.PillConsumption.primary_id == primary_id).all()
+    return allResults
+
+@app.get('pill_consumptions/{calender_entry_id}')
+async def getPillConsumptionsByCalenderEntryId(calender_entry_id: uuid.UUID, db:db_dependency):
+    allResults = db.query(models.PillConsumption).filter(models.PillConsumption.calender_entry_id == calender_entry_id).all()
+    return allResults
+
+@app.put('/pill_consumptions')
+async def updatePillConsumption(newPillConsumption: PillConsumptionUpdateBase, db:db_dependency):
+    oldPillConsumption = db.query(models.PillConsumption).filter(models.PillConsumption.id == newPillConsumption.id).first()
+    
+    if oldPillConsumption:
+        
+        if newPillConsumption.name:
+            oldPillConsumption.name = newPillConsumption.name
+            
+        if newPillConsumption.time:
+            oldPillConsumption.time = newPillConsumption.time
+            
+        if newPillConsumption.dosage:
+            oldPillConsumption.dosage = newPillConsumption.dosage
+            
+        db.commit()
+        db.refresh(oldPillConsumption)
+    
+    if not oldPillConsumption:
+        raise HTTPException(status_code=500,detail="Pill consumption not found")
+    return oldPillConsumption
+
+
+@app.delete('pill_consumptions/{id}')
+async def deletePillConsumption(id: uuid.UUID, db:db_dependency):
+    pillConsumption = db.query(models.PillConsumption).filter(models.PillConsumption.id == id).first()
+
+    if not pillConsumption:
+        raise HTTPException(status_code=404, detail="Pill consumption not found")
+
+    try:
+        db.delete(pillConsumption)
+        db.commit()
+        return {"message": "Pill consumption deleted successfully"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail="Pill consumption deletion failed")
 
 
 #################################################################################################

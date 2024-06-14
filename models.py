@@ -60,3 +60,12 @@ class CalendarEntry(Base):
     symptom_name = Column(String, nullable="False")
     symptom_value = Column(String, nullable="False")
     symptom_unit = Column(String, nullable="True")
+    
+class PillConsumption(Base):
+    __tablename__ = "pill_consumption"
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    primary_id = Column(UUID(as_uuid=True), ForeignKey('primary_user.id'), nullable=False)
+    calender_entry_id = Column(UUID(as_uuid=True), ForeignKey('calendar_entry.id'), nullable=False)
+    name = Column(String, nullable=False)
+    time = Column(Date, nullable=False)
+    dosage = Column(String, nullable=False)
